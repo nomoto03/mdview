@@ -26,7 +26,11 @@ fn read_utf8(path: &Path) -> Result<String, String> {
         }
         Err(e) => return Err(format!("Cannot read {display}: {e}")),
     };
-    String::from_utf8(bytes).map_err(|_| format!("{display} is not valid UTF-8."))
+    let text =
+        String::from_utf8(bytes).map_err(|_| format!("{display} is not valid UTF-8."))?;
+    // Windows editors (Notepad, PowerShell) often prepend a UTF-8 BOM,
+    // which would otherwise break "#" heading detection at file start.
+    Ok(text.strip_prefix('\u{feff}').map(str::to_owned).unwrap_or(text))
 }
 
 fn load_document() -> (Result<Document, String>, Option<PathBuf>) {
@@ -104,6 +108,14 @@ mod tests {
         let path = temp_file("mdview-test-invalid.md", &[0xFF, 0xFE, 0x80]);
         let err = read_utf8(&path).unwrap_err();
         assert!(err.contains("UTF-8"), "error: {err}");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn bom_stripped() {
+        let path = temp_file("mdview-test-bom.md", b"\xEF\xBB\xBF# ok\n");
+        let text = read_utf8(&path).unwrap();
+        assert_eq!(text, "# ok\n");
         let _ = std::fs::remove_file(&path);
     }
 

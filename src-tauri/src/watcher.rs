@@ -44,15 +44,13 @@ pub fn spawn(app: tauri::AppHandle, path: PathBuf) {
                     // Debounce: swallow follow-up events until 300ms of silence.
                     while rx.recv_timeout(Duration::from_millis(300)).is_ok() {}
                     // Read failures are mid-save transients; the next event retries.
-                    if let Ok(bytes) = std::fs::read(&path) {
-                        if let Ok(text) = String::from_utf8(bytes) {
-                            let _ = app.emit(
-                                "file-changed",
-                                FileChangedPayload {
-                                    html: crate::markdown::to_html(&text),
-                                },
-                            );
-                        }
+                    if let Ok(text) = crate::read_utf8(&path) {
+                        let _ = app.emit(
+                            "file-changed",
+                            FileChangedPayload {
+                                html: crate::markdown::to_html(&text),
+                            },
+                        );
                     }
                 }
                 Ok(Err(_)) => continue,

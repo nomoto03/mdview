@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     install.ps1で登録したエクスプローラー右クリックメニュー（.mdファイル）を削除する。
 .EXAMPLE

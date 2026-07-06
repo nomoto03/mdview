@@ -22,6 +22,22 @@ Windowsエクスプローラーで`.md`ファイルを右クリックしたと�
 .\windows\context-menu\uninstall.ps1
 ```
 
+## 実行ポリシーでブロックされる場合
+
+Windowsの既定設定では、ローカルの`.ps1`ファイルの実行がPowerShellの実行ポリシー
+によりブロックされることがあります（`UnauthorizedAccess`エラー）。これは
+mdview固有の問題ではなく、署名されていないスクリプト全般に適用されるWindowsの
+既定動作です。
+
+管理者権限やシステム全体の設定変更をせずに、その場限りで許可するには
+`-ExecutionPolicy Bypass`を付けて実行します:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\windows\context-menu\install.ps1 -ExePath C:\path\to\mdview.exe
+```
+
+Git Bash等、PowerShell以外のシェルから`powershell.exe`経由で呼び出す場合も同様です。
+
 ## 手動検証手順
 
 1. `install.ps1 -ExePath <mdview.exeの絶対パス>` を実行する

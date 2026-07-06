@@ -106,3 +106,10 @@ npm run tauri icon app-icon.png
 - 拡張子は不問（.md以外のテキストファイルも表示可能）
 - ファイル更新は親ディレクトリ監視で検知（VS Code等のアトミック保存にも対応）、300msデバウンス
 - Markdown内の生HTMLはそのまま表示されるが、スクリプト実行はCSPで遮断
+
+## オプション機能: エクスプローラー右クリック連携
+
+Windowsエクスプローラーで`.md`ファイルを右クリックしたときに「mdviewで開く」
+を表示できるようにする、オプションのスクリプトを用意しています。管理者権限は
+不要です。詳細は [`windows/context-menu/README.md`](windows/context-menu/README.md)
+を参照してください。

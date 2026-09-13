@@ -11,6 +11,9 @@ mdview README.md
 - **閲覧専用** — 編集・検索・ワークスペース機能なし
 - **GitHub Flavored Markdown** — テーブル、チェックボックス、打ち消し線、コードブロック
 - **自動再読み込み** — 表示中のファイルが更新されると即座に反映（スクロール位置は保持）
+- **リンクを辿れる** — 別のMarkdownは新しいウィンドウで、外部URLは既定ブラウザで開く
+- **ローカル画像** — Markdownからの相対パスで表示（遅延読み込み）
+- **ダークモード** — OSのテーマに追従
 - **日本語対応** — UTF-8、日本語フォントスタック
 - **ポータブル** — 単一exe、インストーラ不要（WebView2はOS同梱を利用）
 
@@ -33,9 +36,12 @@ markdown-viewer/
 ├── vite.config.ts        # Vite設定
 ├── index.html            # 1画面のシェル
 ├── app-icon.png          # アイコン元画像
+├── CONTEXT.md            # 用語集
+├── docs/adr/             # 設計判断の記録
+├── .github/workflows/    # CI（cargo test + tsc）
 ├── src/                  # フロントエンド
-│   ├── main.ts           # 初期コンテンツ取得・更新イベント受信・スクロール保持
-│   └── style.css         # GitHub風ライトテーマ + 日本語フォント
+│   ├── main.ts           # 初期取得・更新イベント受信・スクロール保持・リンク処理
+│   └── style.css         # GitHub風テーマ（ライト/ダーク） + 日本語フォント
 └── src-tauri/            # Rustバックエンド
     ├── Cargo.toml
     ├── build.rs
@@ -44,9 +50,10 @@ markdown-viewer/
     │   └── default.json  # 権限（core:defaultのみ）
     ├── icons/            # 生成済みアイコン（icon.ico含む）
     └── src/
-        ├── main.rs       # CLI引数処理・ファイル読み込み・Tauriアプリ本体
+        ├── main.rs       # CLI引数処理・ファイル読み込み・画像配信・Tauriアプリ本体
+        ├── links.rs      # リンク/画像の参照先解決（相対パス・UNC判定）
         ├── markdown.rs   # Markdown→HTML変換（pulldown-cmark, GFM拡張）
-        └── watcher.rs    # ファイル監視（親ディレクトリ監視 + デバウンス）
+        └── watcher.rs    # ファイル監視（親ディレクトリ監視 + デバウンス + 削除検知）
 ```
 
 ## ビルド手順
@@ -100,12 +107,58 @@ npm run tauri icon app-icon.png
 ## 動作仕様
 
 - `mdview <ファイル>` — 指定ファイルを表示。実行のたびに新しいウィンドウが開く（マルチインスタンス）
+- `mdview --help` / `mdview --version`
 - 引数なし → ウィンドウ内にUsageを表示
-- ファイルが存在しない → ウィンドウ内にエラーを表示
-- UTF-8以外のファイル → ウィンドウ内にエラーを表示（UTF-8のみサポート、BOM付きUTF-8は可）
 - 拡張子は不問（.md以外のテキストファイルも表示可能）
 - ファイル更新は親ディレクトリ監視で検知（VS Code等のアトミック保存にも対応）、300msデバウンス
+- 表示中のファイルが削除されると、1秒の猶予後にヘッダで通知（本文はそのまま残る）
+- 配色はOSのテーマに追従（`prefers-color-scheme`）
 - Markdown内の生HTMLはそのまま表示されるが、スクリプト実行はCSPで遮断
+
+### 読み込めないファイル
+
+いずれもウィンドウ内にエラーを表示します。区別して表示するのは、リンクを辿ると
+画像やPDFがmdviewで開かれるためです。
+
+| 状態 | 表示 |
+| ---- | ---- |
+| ファイルが存在しない | File not found |
+| バイナリ（先頭8KBにNULバイト） | バイナリファイルのため表示不可 |
+| UTF-16（BOMあり） | UTF-16である旨 |
+| その他UTF-8以外（Shift_JIS等） | UTF-8として不正である旨 |
+
+UTF-8のみサポートします（BOM付きUTF-8は可）。
+
+### リンクと画像
+
+| リンク先 | 動作 |
+| -------- | ---- |
+| ローカルファイル | **新しいmdviewウィンドウ**で開く（拡張子は問わない） |
+| `http` / `https` / `mailto` | OSの既定ハンドラ（ブラウザ等）で開く |
+| `#見出し` | ページ内移動（見出しにIDは振っていないため通常は何も起きない） |
+| ネットワークパス（`\\server\...`） | 何もしない |
+
+- ローカルファイルは**常にmdview自身**に渡されます。OSの既定アプリには渡しません
+- 画像はMarkdownからの相対パスで解決され、表示領域に入った時点で読み込まれます
+- 画像はキャッシュされるため、Markdownを変えずに画像だけ差し替えても再描画されません
+- リンクのクリック**以外**の遷移（`<meta http-equiv="refresh">`、フォーム送信）は
+  すべて拒否されます
+
+## 設計判断
+
+なぜそうなっているのかは [`docs/adr/`](docs/adr/) に記録しています。用語は
+[`CONTEXT.md`](CONTEXT.md) を参照してください。
+
+- [ドキュメント参照は新しいウィンドウで開き、OSのシェルには渡さない](docs/adr/0001-links-open-new-window-never-the-shell.md)
+- [画像は独自プロトコルで遅延配信し、鮮度よりも軽さを取る](docs/adr/0002-images-served-lazily-over-a-private-protocol.md)
+- [リンクのクリックはJSで扱い、それ以外の遷移はRustで一律に拒否する](docs/adr/0003-clicks-in-js-navigation-denied-in-rust.md)
+- [mdviewは状態を持たない](docs/adr/0004-mdview-holds-no-state.md)
+
+### 意図的に持たない機能
+
+履歴と「戻る」、OSの既定アプリ連携、画像の更新追跡、ウィンドウサイズ・位置の記憶、
+ドラッグ＆ドロップ、設定ファイル、Shift_JIS対応、見出しIDの自動採番、数式、
+シンタックスハイライト。それぞれの理由は上のADRに書いてあります。
 
 ## オプション機能: エクスプローラー右クリック連携
 

@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    # Windows only, and not merely because that is what mdview targets: the
+    # tests exercise Windows path semantics — drive prefixes, backslashes, the
+    # verbatim `\\?\` form, UNC detection — which do not hold elsewhere.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # Must precede the Rust build: `generate_context!` embeds the frontend
+      # bundle, and `dist/` is not committed.
+      - run: npm run build
+
+      - run: cargo test --manifest-path src-tauri/Cargo.toml

@@ -1,3 +1,35 @@
+/* Colours live in one place so the dark theme is a palette swap and nothing
+   more. mdview follows the OS setting and offers no toggle of its own: it keeps
+   no state anywhere, so there would be nowhere to remember the choice.
+   See docs/adr/0004-mdview-holds-no-state.md */
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --surface: #f6f8fa;
+  --link: #0969da;
+  --warn: #9a6700;
+  --error-bg: #fff1f0;
+  --error-border: #ffa39e;
+  --error-fg: #a8071a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --border: #30363d;
+    --surface: #161b22;
+    --link: #4493f8;
+    --warn: #d29922;
+    --error-bg: #2b1416;
+    --error-border: #6e2c31;
+    --error-fg: #ff9492;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -7,27 +39,35 @@ body {
     "Yu Gothic UI", Meiryo, sans-serif;
   font-size: 16px;
   line-height: 1.6;
-  color: #1f2328;
-  background: #ffffff;
+  color: var(--fg);
+  background: var(--bg);
   max-width: 860px;
   margin: 0 auto;
   padding: 0 24px 48px;
   word-wrap: break-word;
 }
 
-header#filename {
+header {
   position: sticky;
   top: 0;
-  background: #ffffff;
-  border-bottom: 1px solid #d1d9e0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
   padding: 10px 0;
   font-weight: 600;
   font-size: 14px;
 }
 
+/* Empty unless the document has gone missing, so it takes no space until the
+   watcher has waited out its grace period and confirmed the deletion. */
+#status {
+  margin-left: 12px;
+  color: var(--warn);
+  font-weight: 400;
+}
+
 h1,
 h2 {
-  border-bottom: 1px solid #d1d9e0;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 0.3em;
 }
 
@@ -44,7 +84,7 @@ h6 {
 }
 
 a {
-  color: #0969da;
+  color: var(--link);
   text-decoration: none;
 }
 
@@ -53,7 +93,7 @@ a:hover {
 }
 
 pre {
-  background: #f6f8fa;
+  background: var(--surface);
   border-radius: 6px;
   padding: 16px;
   overflow-x: auto;
@@ -63,7 +103,7 @@ pre {
 code {
   font-family: ui-monospace, Consolas, "Courier New", "MS Gothic", monospace;
   font-size: 85%;
-  background: #f6f8fa;
+  background: var(--surface);
   padding: 0.2em 0.4em;
   border-radius: 4px;
 }
@@ -84,22 +124,22 @@ table {
 
 th,
 td {
-  border: 1px solid #d1d9e0;
+  border: 1px solid var(--border);
   padding: 6px 13px;
 }
 
 th {
   font-weight: 600;
-  background: #f6f8fa;
+  background: var(--surface);
 }
 
 tr:nth-child(2n) {
-  background: #f6f8fa;
+  background: var(--surface);
 }
 
 blockquote {
-  border-left: 4px solid #d1d9e0;
-  color: #59636e;
+  border-left: 4px solid var(--border);
+  color: var(--muted);
   margin-left: 0;
   padding-left: 16px;
 }
@@ -121,7 +161,7 @@ input[type="checkbox"] {
 
 hr {
   border: 0;
-  border-top: 1px solid #d1d9e0;
+  border-top: 1px solid var(--border);
   margin: 24px 0;
 }
 
@@ -130,8 +170,8 @@ img {
 }
 
 pre.error {
-  background: #fff1f0;
-  border: 1px solid #ffa39e;
-  color: #a8071a;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  color: var(--error-fg);
   white-space: pre-wrap;
 }

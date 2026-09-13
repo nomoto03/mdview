@@ -1,7 +1,10 @@
 name: CI
 
 on:
+  # Restricted to the default branch so that a branch with an open pull request
+  # is not built twice for the same commit, once per trigger.
   push:
+    branches: [master]
   pull_request:
 
 jobs:
